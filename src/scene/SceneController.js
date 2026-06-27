@@ -19,16 +19,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Utilidades de color (lerp entre dos hex) ──────────────────────────────────
 const clampHex = (h) => (h && h[0] === '#' ? h : '#888888');
+
 function hexToRgb(hex) {
   const h = clampHex(hex).slice(1);
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
 }
+
 function rgbToHex([r, g, b]) {
   const c = (n) => Math.round(n).toString(16).padStart(2, '0');
   return `#${c(r)}${c(g)}${c(b)}`;
 }
+
 function hexLerp(a, b, t) {
-  const ca = hexToRgb(a), cb = hexToRgb(b);
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
   return rgbToHex(ca.map((v, i) => v + (cb[i] - v) * t));
 }
 
@@ -48,7 +56,7 @@ export class SceneController {
     this.site = null;
     this.lastHighlighted = null;
 
-    registerChronoEffects(AFRAME); // registra el componente del efecto
+    registerChronoEffects(AFRAME);
     this._buildShell();
   }
 
@@ -87,19 +95,49 @@ export class SceneController {
     // Grupos dinámicos.
     const currentGroup = document.createElement('a-entity');
     currentGroup.setAttribute('id', DOM.CURRENT_GROUP);
+
     const reconGroup = document.createElement('a-entity');
     reconGroup.setAttribute('id', DOM.RECONSTRUCTED_GROUP);
 
-    // Cámara con cursor de ratón (raycaster sobre .clickable).
+    // Cámara con cursor de ratón.
     const camera = document.createElement('a-camera');
     camera.setAttribute('position', '0 1.6 6');
     camera.setAttribute('wasd-controls', 'acceleration: 30');
+
     const cursor = document.createElement('a-entity');
     cursor.setAttribute('cursor', 'rayOrigin: mouse; fuse: false');
     cursor.setAttribute('raycaster', 'objects: .clickable; far: 100');
+
     camera.appendChild(cursor);
 
-    scene.append(ambient, dir, sky, ground, currentGroup, reconGroup, camera);
+    // Mejora UX: texto de ayuda dentro de la escena.
+    const helpText = document.createElement('a-text');
+    helpText.setAttribute('id', 'cv-help-text');
+    helpText.setAttribute(
+      'value','Interactua con los puntos turquesa'
+      
+    );
+    helpText.setAttribute('align', 'center');
+    helpText.setAttribute('color', COLORS.accent);
+    helpText.setAttribute('width', '5');
+    helpText.setAttribute('position', '0 3.5 -5');
+    helpText.setAttribute('scale', '0.55 0.55 0.55');
+    helpText.setAttribute(
+      'animation',
+      'property: opacity; from: 0.45; to: 1; dir: alternate; dur: 1500; loop: true; easing: easeInOutSine'
+    );
+
+    scene.append(
+      ambient,
+      dir,
+      sky,
+      ground,
+      currentGroup,
+      reconGroup,
+      helpText,
+      camera
+    );
+
     this.container.appendChild(scene);
 
     this.sceneEl = scene;
@@ -109,6 +147,7 @@ export class SceneController {
     this.dirEl = dir;
     this.currentGroup = currentGroup;
     this.reconGroup = reconGroup;
+    this.helpText = helpText;
   }
 
   // ── Carga de la vista actual ────────────────────────────────────────────────
@@ -118,6 +157,13 @@ export class SceneController {
     this._applyEnvironment(site.current.environment, false);
     buildCurrentScene(site, this.currentGroup);
     this.sceneEl.setAttribute('chrono-effect', 'active', false);
+
+    if (this.helpText) {
+      this.helpText.setAttribute(
+        'value',
+        'Activa Chrono-Vision para reconstruir el sitio historico'
+      );
+    }
   }
 
   // ── Transición actual → pasado ──────────────────────────────────────────────
@@ -129,7 +175,14 @@ export class SceneController {
   async runReconstruction(reconstruction) {
     const fx = reconstruction.effects || {};
 
-    // 1) Activa el efecto Chrono-Vision (partículas + escaneo holográfico).
+    if (this.helpText) {
+      this.helpText.setAttribute(
+        'value',
+        'Interactua con los puntos turquesa'
+      );
+    }
+
+    // 1) Activa el efecto Chrono-Vision.
     this.sceneEl.setAttribute('chrono-effect', {
       active: true,
       color: fx.particleColor || COLORS.accent,
@@ -137,19 +190,20 @@ export class SceneController {
       speed: fx.scanSpeed || 1.4,
     });
 
-    // 2) Transición de entorno (cielo/luz/niebla) en paralelo.
+    // 2) Transición de entorno.
     this._animateEnvironment(reconstruction.environment, 2.0);
 
-    // 3) Desvanece los objetos deteriorados y limpia el grupo.
+    // 3) Desvanece los objetos deteriorados.
     await this._fadeGroup(this.currentGroup, 1, 0, 1.1);
     this.currentGroup.innerHTML = '';
 
-    // 4) Renderiza la reconstrucción (oculta) y la revela con fade-in.
+    // 4) Renderiza la reconstrucción.
     const { yearEl } = renderReconstruction(reconstruction, this.reconGroup, {
       onHotspot: (hs) => this.onHotspot && this.onHotspot(hs),
       onObject: (spec, el) => this._handleObjectClick(spec, el),
     });
-    await wait(60); // deja montar las mallas antes de animar opacidad
+
+    await wait(60);
     await this._fadeGroup(this.reconGroup, 0, 1, 1.2);
 
     // 5) Aparición animada del texto del año.
@@ -160,7 +214,7 @@ export class SceneController {
       );
     }
 
-    // 6) Apaga el efecto de escaneo (la escena ya está reconstruida).
+    // 6) Apaga el efecto de escaneo.
     await wait(500);
     this.sceneEl.setAttribute('chrono-effect', 'active', false);
   }
@@ -168,33 +222,36 @@ export class SceneController {
   // ── Restablecer vista actual ────────────────────────────────────────────────
   reset() {
     if (!this.site) return;
+
     this.sceneEl.setAttribute('chrono-effect', 'active', false);
     this.reconGroup.innerHTML = '';
     this._applyEnvironment(this.site.current.environment, true);
     buildCurrentScene(this.site, this.currentGroup);
     this._setGroupOpacity(this.currentGroup, 1);
+
+    if (this.helpText) {
+      this.helpText.setAttribute(
+        'value',
+        'Activa Chrono-Vision para reconstruir el sitio historico'
+      );
+    }
   }
 
   // ── Interacción con objetos ─────────────────────────────────────────────────
-  /** Resalta visualmente una entidad (gestiona el resaltado previo). */
   _highlight(el) {
     if (this.lastHighlighted && this.lastHighlighted !== el) {
       setHighlight(this.lastHighlighted, false);
     }
+
     setHighlight(el, true);
     this.lastHighlighted = el;
   }
 
-  // Clic directo sobre un objeto: resalta y notifica a la UI (muestra su info).
   _handleObjectClick(spec, el) {
     this._highlight(el);
     if (this.onObject) this.onObject(spec);
   }
 
-  /**
-   * Resalta un objeto por su id SIN sobrescribir el panel (lo usa el hotspot,
-   * que ya muestra su propia descripción histórica).
-   */
   highlightById(id) {
     const el = this.reconGroup.querySelector(`[data-cv-id="${id}"]`);
     if (el) this._highlight(el);
@@ -204,13 +261,21 @@ export class SceneController {
   _applyEnvironment(env, _animate) {
     this.skyEl.setAttribute('color', env.sky);
     this.groundEl.setAttribute('material', 'color', env.ground);
-    this.sceneEl.setAttribute('fog', `type: linear; color: ${env.fog}; near: 10; far: 45`);
-    this.dirEl.setAttribute('light', `type: directional; color: ${env.lightColor}; intensity: ${env.lightIntensity}`);
-    this.ambientEl.setAttribute('light', `type: ambient; color: #ffffff; intensity: ${env.ambient}`);
+    this.sceneEl.setAttribute(
+      'fog',
+      `type: linear; color: ${env.fog}; near: 10; far: 45`
+    );
+    this.dirEl.setAttribute(
+      'light',
+      `type: directional; color: ${env.lightColor}; intensity: ${env.lightIntensity}`
+    );
+    this.ambientEl.setAttribute(
+      'light',
+      `type: ambient; color: #ffffff; intensity: ${env.ambient}`
+    );
   }
 
   _animateEnvironment(env, dur) {
-    // Captura estado inicial.
     const fromSky = this.skyEl.getAttribute('color');
     const fromGround = this.groundEl.getAttribute('material').color;
     const fromFog = this.sceneEl.getAttribute('fog').color;
@@ -218,33 +283,52 @@ export class SceneController {
     const fromAmb = this.ambientEl.getAttribute('light');
 
     const p = { t: 0 };
+
     gsap.to(p, {
       t: 1,
       duration: dur,
       ease: 'power2.inOut',
       onUpdate: () => {
         const t = p.t;
+
         this.skyEl.setAttribute('color', hexLerp(fromSky, env.sky, t));
-        this.groundEl.setAttribute('material', 'color', hexLerp(fromGround, env.ground, t));
-        this.sceneEl.setAttribute('fog', `type: linear; color: ${hexLerp(fromFog, env.fog, t)}; near: 10; far: 45`);
+        this.groundEl.setAttribute(
+          'material',
+          'color',
+          hexLerp(fromGround, env.ground, t)
+        );
+        this.sceneEl.setAttribute(
+          'fog',
+          `type: linear; color: ${hexLerp(fromFog, env.fog, t)}; near: 10; far: 45`
+        );
         this.dirEl.setAttribute(
           'light',
-          `type: directional; color: ${hexLerp(fromDir.color, env.lightColor, t)}; intensity: ${fromDir.intensity + (env.lightIntensity - fromDir.intensity) * t}`
+          `type: directional; color: ${hexLerp(
+            fromDir.color,
+            env.lightColor,
+            t
+          )}; intensity: ${
+            fromDir.intensity + (env.lightIntensity - fromDir.intensity) * t
+          }`
         );
         this.ambientEl.setAttribute(
           'light',
-          `type: ambient; color: #ffffff; intensity: ${fromAmb.intensity + (env.ambient - fromAmb.intensity) * t}`
+          `type: ambient; color: #ffffff; intensity: ${
+            fromAmb.intensity + (env.ambient - fromAmb.intensity) * t
+          }`
         );
       },
     });
   }
 
-  // ── Opacidad de un grupo (para fades) ───────────────────────────────────────
+  // ── Opacidad de un grupo ────────────────────────────────────────────────────
   _setGroupOpacity(group, o) {
     if (!group.object3D) return;
+
     group.object3D.traverse((node) => {
       if (node.isMesh && node.material) {
         const mats = Array.isArray(node.material) ? node.material : [node.material];
+
         mats.forEach((m) => {
           m.transparent = true;
           m.opacity = o;
@@ -257,6 +341,7 @@ export class SceneController {
     return new Promise((resolve) => {
       const proxy = { o: from };
       this._setGroupOpacity(group, from);
+
       gsap.to(proxy, {
         o: to,
         duration: dur,
