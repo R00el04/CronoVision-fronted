@@ -63,6 +63,29 @@
             Restablecer vista actual
           </button>
         </section>
+
+        <!-- Actividad en tiempo real (Firebase) -->
+        <section id="cv-live-stats" class="cv-block cv-live-block" hidden>
+          <h2 class="cv-block__title">
+            <span class="cv-live-dot"></span>
+            Actividad en tiempo real
+          </h2>
+          <p class="cv-live-count">
+            Interacciones recientes:
+            <strong id="cv-interaction-count">0</strong>
+          </p>
+          <ul id="cv-recent-actions" class="cv-live-list"></ul>
+        </section>
+
+        <!-- Narración histórica con IA (Groq) -->
+        <section id="cv-narration" class="cv-block cv-narration-block" hidden>
+          <h2 class="cv-block__title">
+            <span class="cv-narration-icon" aria-hidden="true">✦</span>
+            Crónica del explorador
+          </h2>
+          <div id="cv-narration-text" class="cv-narration-text" aria-live="polite" aria-label="Narración histórica generada por IA"></div>
+          <p class="cv-narration-credit">Generado por IA · Groq LLaMA 3</p>
+        </section>
       </aside>
 
       <!-- ── Contenedor de la escena A-Frame ────────────────────────────────── -->

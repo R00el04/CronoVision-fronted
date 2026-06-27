@@ -1,7 +1,7 @@
 /**
  * uiController.js
  * Coordina la interfaz con la escena y los servicios. Es el "pegamento":
- *  - Construye el selector de sitios.
+ *  - Construye el selector de sitios (cargados desde Firestore en tiempo real).
  *  - Gestiona los botones "Activar Chrono-Vision" y "Restablecer vista actual".
  *  - Llama al API de reconstrucción y actualiza el panel.
  *  - Persiste interacciones.
@@ -10,10 +10,12 @@
  * (delegada a PanelController).
  */
 
-import { SITES } from '../data/sites.js';
 import { MESSAGES } from '../utils/constants.js';
 import { requestReconstruction } from '../services/reconstructionApi.js';
 import { saveInteraction } from '../services/interactionService.js';
+import { subscribeSites } from '../services/sitesService.js';
+import { subscribeInteractionCount } from '../services/liveStatsService.js';
+import { streamNarration } from '../services/narrationApi.js';
 
 export class UIController {
   /**
@@ -28,22 +30,43 @@ export class UIController {
     this.scene = scene;
     this.site = null;
     this.busy = false;
+    this._sites = [];           // sitios cargados (local o Firestore)
+    this._unsubSites = null;    // cleanup del listener de sitios
+    this._unsubStats = null;    // cleanup del listener de stats
+    this._narrationAbort = null; // AbortController del stream activo
 
     this.selectorEl = root.querySelector('#cv-site-selector');
     this.activateBtn = root.querySelector('#cv-activate');
     this.resetBtn = root.querySelector('#cv-reset');
 
-    this._buildSelector();
     this._wireButtons();
+    this._initFirestoreListeners();
+  }
+
+  // ── Listeners en tiempo real ────────────────────────────────────────────────
+
+  _initFirestoreListeners() {
+    // 1) Sitios: se actualiza el selector cuando Firestore cambia.
+    this._unsubSites = subscribeSites((sites) => {
+      this._sites = sites;
+      this._buildSelector(sites);
+    });
+
+    // 2) Estadísticas de interacciones en tiempo real.
+    this._unsubStats = subscribeInteractionCount((stats) => {
+      this.panel.updateLiveStats(stats);
+    });
   }
 
   // ── Selector de sitios ──────────────────────────────────────────────────────
-  _buildSelector() {
+  _buildSelector(sites) {
+    const activeSiteId = this.site?.id ?? null;
     this.selectorEl.innerHTML = '';
-    for (const site of SITES) {
+    for (const site of sites) {
       const btn = document.createElement('button');
       btn.className = 'cv-site-btn';
       btn.dataset.siteId = site.id;
+      if (site.id === activeSiteId) btn.classList.add('is-active');
       btn.innerHTML = `<span class="cv-site-btn__name">${site.name}</span>` +
         `<span class="cv-site-btn__meta">${site.mlCategory}</span>`;
       btn.addEventListener('click', () => this.selectSite(site.id));
@@ -59,9 +82,15 @@ export class UIController {
   // ── Selección de sitio ──────────────────────────────────────────────────────
   selectSite(siteId) {
     if (this.busy) return;
-    const site = SITES.find((s) => s.id === siteId);
+    const site = this._sites.find((s) => s.id === siteId);
     if (!site) return;
     this.site = site;
+
+    // Cancela narración previa si estaba activa.
+    if (this._narrationAbort) {
+      this._narrationAbort.abort();
+      this._narrationAbort = null;
+    }
 
     // Marca el botón activo.
     this.selectorEl.querySelectorAll('.cv-site-btn').forEach((b) => {
@@ -70,6 +99,7 @@ export class UIController {
 
     this.scene.loadSite(site);
     this.panel.setSite(site);
+    this.panel.clearNarration();
     this.panel.setStatus(MESSAGES.IDLE, 'idle');
     this.activateBtn.disabled = false;
     this.resetBtn.disabled = true;
@@ -103,6 +133,9 @@ export class UIController {
       this.panel.setStatus(MESSAGES.DONE, 'done');
       this.resetBtn.disabled = false;
 
+      // 6) Arranca la narración histórica con IA (streaming).
+      this._startNarration(this.site, reconstruction.targetYear);
+
       saveInteraction({
         action: 'reconstruction_done',
         siteId: this.site.id,
@@ -122,13 +155,41 @@ export class UIController {
   // ── Restablecer vista actual ────────────────────────────────────────────────
   resetView() {
     if (!this.site || this.busy) return;
+
+    // Cancela cualquier narración en curso.
+    if (this._narrationAbort) {
+      this._narrationAbort.abort();
+      this._narrationAbort = null;
+    }
+
     this.scene.reset();
     this.panel.clearPrediction();
+    this.panel.clearNarration();
     this.panel.setSite(this.site);
     this.panel.setStatus(MESSAGES.IDLE, 'idle');
     this.activateBtn.disabled = false;
     this.resetBtn.disabled = true;
     saveInteraction({ action: 'reset_view', siteId: this.site.id });
+  }
+
+  // ── Narración histórica con IA ──────────────────────────────────────────────
+  _startNarration(site, targetYear) {
+    // Cancela si había una narración previa activa.
+    if (this._narrationAbort) this._narrationAbort.abort();
+
+    this.panel.startNarration();
+
+    this._narrationAbort = streamNarration(site.id, targetYear, {
+      onChunk: (chunk) => this.panel.appendNarrationChunk(chunk),
+      onDone: () => {
+        this.panel.endNarration(false);
+        this._narrationAbort = null;
+      },
+      onError: () => {
+        this.panel.endNarration(true);
+        this._narrationAbort = null;
+      },
+    });
   }
 
   // ── Handlers de escena (inyectados a SceneController) ───────────────────────

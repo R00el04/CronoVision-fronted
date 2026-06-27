@@ -165,9 +165,130 @@ html, body {
 }
 .cv-btn--ghost:not(:disabled):hover { border-color: var(--accent-soft); }
 
-/* ── Responsive: panel arriba en pantallas estrechas ────────────────────────── */
+/* ── Bloque narración histórica con IA ──────────────────────────────────────── */
+.cv-narration-block {
+  border-color: rgba(255, 181, 71, 0.25);  /* tono cálido dorado */
+}
+
+.cv-narration-block .cv-block__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--warning);
+}
+
+.cv-narration-icon {
+  font-size: 0.9rem;
+  color: var(--warning);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.cv-narration-text {
+  font-size: 0.84rem;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  min-height: 2rem;
+  position: relative;
+  /* Entrada suave cuando aparece el bloque */
+}
+
+/* Cursor parpadeante tipo terminal mientras escribe */
+.cv-narration-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--warning);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 0.7s step-end infinite;
+  border-radius: 1px;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Estado de error */
+.cv-narration-text[data-state="error"] {
+  color: var(--danger);
+  font-style: italic;
+}
+
+.cv-narration-credit {
+  margin: 8px 0 0;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  font-family: monospace;
+  opacity: 0.6;
+}
+
+/* Responsive: panel arriba en pantallas estrechas ────────────────────────── */
 @media (max-width: 760px) {
   #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   #cv-panel { height: auto; max-height: 42vh; border-right: none; border-bottom: 1px solid var(--border); }
   #cv-stage { height: 58vh; }
+}
+
+/* ── Bloque actividad en tiempo real (Firebase) ─────────────────────────────── */
+.cv-live-block {
+  border-color: rgba(54, 224, 200, 0.25);
+}
+
+.cv-live-block .cv-block__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Punto pulsante verde que indica conexión activa */
+.cv-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.cv-live-count {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.cv-live-count strong {
+  color: var(--accent);
+  font-size: 1rem;
+  font-family: monospace;
+}
+
+.cv-live-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cv-live-item {
+  font-size: 0.76rem;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: rgba(54, 224, 200, 0.05);
+  border: 1px solid rgba(54, 224, 200, 0.1);
+  line-height: 1.4;
+}
+
+.cv-live-action {
+  color: var(--text);
+  font-family: monospace;
+}
+
+.cv-live-site {
+  color: var(--accent);
+  font-family: monospace;
 }
