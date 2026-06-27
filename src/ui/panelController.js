@@ -75,4 +75,103 @@ export class PanelController {
     p.textContent = description;
     this.els.info.append(h, p);
   }
+
+  /**
+   * Inicia la sección de narración IA con efecto de escritura.
+   * Llama a startNarration() antes de empezar a recibir chunks,
+   * luego appendNarrationChunk() por cada fragmento,
+   * y finalmente endNarration() al terminar.
+   */
+  startNarration() {
+    const block = this.root.querySelector('#cv-narration');
+    if (!block) return;
+    block.hidden = false;
+
+    const content = block.querySelector('#cv-narration-text');
+    if (!content) return;
+
+    // Estado "escribiendo": cursor parpadeante y spinner.
+    content.innerHTML = '';
+    content.dataset.state = 'writing';
+
+    const cursor = document.createElement('span');
+    cursor.className = 'cv-narration-cursor';
+    cursor.setAttribute('aria-hidden', 'true');
+    content.appendChild(cursor);
+  }
+
+  /** Agrega un fragmento de texto al área de narración (streaming). */
+  appendNarrationChunk(chunk) {
+    const content = this.root.querySelector('#cv-narration-text');
+    if (!content) return;
+
+    // Inserta el texto antes del cursor parpadeante.
+    const cursor = content.querySelector('.cv-narration-cursor');
+    const textNode = document.createTextNode(chunk);
+    if (cursor) {
+      content.insertBefore(textNode, cursor);
+    } else {
+      content.appendChild(textNode);
+    }
+
+    // Auto-scroll suave al fondo del panel.
+    this.root.scrollTop = this.root.scrollHeight;
+  }
+
+  /** Finaliza la narración: oculta el cursor y marca como completada. */
+  endNarration(isError = false) {
+    const content = this.root.querySelector('#cv-narration-text');
+    if (!content) return;
+
+    const cursor = content.querySelector('.cv-narration-cursor');
+    if (cursor) cursor.remove();
+
+    content.dataset.state = isError ? 'error' : 'done';
+
+    if (isError && !content.textContent.trim()) {
+      content.textContent = 'No se pudo generar la narración.';
+    }
+  }
+
+  /** Oculta y limpia el bloque de narración (al resetear o cambiar de sitio). */
+  clearNarration() {
+    const block = this.root.querySelector('#cv-narration');
+    if (!block) return;
+    block.hidden = true;
+    const content = block.querySelector('#cv-narration-text');
+    if (content) {
+      content.innerHTML = '';
+      content.dataset.state = '';
+    }
+  }
+
+  /**
+   * Actualiza el bloque de estadísticas en tiempo real.
+   * Se llama automáticamente cuando Firestore notifica un cambio.
+   * @param {{ total: number, recent: {action:string, siteId:string}[] }} stats
+   */
+  updateLiveStats({ total, recent }) {
+    const block = this.root.querySelector('#cv-live-stats');
+    if (!block) return;
+
+    // Muestra el bloque si estaba oculto.
+    block.hidden = false;
+
+    // Actualiza el contador.
+    const counter = block.querySelector('#cv-interaction-count');
+    if (counter) counter.textContent = total;
+
+    // Actualiza la lista de las últimas acciones.
+    const list = block.querySelector('#cv-recent-actions');
+    if (!list) return;
+    list.innerHTML = '';
+    recent.forEach(({ action, siteId }) => {
+      const li = document.createElement('li');
+      li.className = 'cv-live-item';
+      const label = action.replace(/_/g, ' ');
+      const site = siteId !== '—' ? ` · <span class="cv-live-site">${siteId}</span>` : '';
+      li.innerHTML = `<span class="cv-live-action">${label}</span>${site}`;
+      list.appendChild(li);
+    });
+  }
 }
