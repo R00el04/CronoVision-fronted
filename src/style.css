@@ -61,7 +61,7 @@ html, body {
   margin: 0px 60px;
   width: calc(100% - 120px);
   height: calc(100vh - 96px);
-  z-index: 10;
+  z-index: 20;
 
   background: linear-gradient(180deg, var(--panel-bg) 0%, #080d12 100%);
   border: 1px solid var(--border);
