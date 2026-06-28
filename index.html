@@ -24,11 +24,19 @@
       <!-- ── Panel UI lateral (tema oscuro futurista) ───────────────────────── -->
       <aside id="cv-panel">
 
-        <!-- Handle mobile: toque para abrir/cerrar el bottom sheet -->
+        <!-- Handle: toque para abrir/cerrar + botón mute -->
         <div id="cv-panel-handle" role="button" aria-label="Abrir o cerrar panel" tabindex="0">
           <span class="cv-handle-bar"></span>
           <p class="cv-handle-title" id="cv-handle-site-name">Chrono-Vision</p>
-          <span class="cv-handle-chevron" aria-hidden="true">🔺</span>
+          <div class="cv-handle-actions">
+            <button id="cv-mute-btn"
+                    class="cv-mute-btn"
+                    aria-label="Silenciar audio"
+                    title="Silenciar / activar audio">
+              <span class="cv-mute-icon" aria-hidden="true">🔊</span>
+            </button>
+            <span class="cv-handle-chevron" aria-hidden="true">🔺</span>
+          </div>
         </div>
 
         <header class="cv-header">
@@ -37,13 +45,20 @@
         </header>
 
         <!-- Selector de sitios (poblado por uiController) -->
-        <section class="cv-block">
-          <h2 class="cv-block__title">Selecciona un sitio</h2>
+        <section class="cv-block cv-block--sites">
+          <h2 class="cv-block__title">
+            <span class="cv-block__icon" aria-hidden="true">◈</span>
+            Selecciona un sitio
+          </h2>
           <div id="cv-site-selector" class="cv-selector"></div>
         </section>
 
         <!-- Estado del modelo -->
         <section class="cv-block cv-statusbox">
+          <h2 class="cv-block__title">
+            <span class="cv-block__icon" aria-hidden="true">⬡</span>
+            Estado del sistema
+          </h2>
           <div class="cv-status-line">
             <span id="cv-status-dot" class="cv-status-dot" data-state="idle"></span>
             <span id="cv-status-text" class="cv-status-text">Sistema Chrono-Vision en espera</span>
@@ -54,17 +69,25 @@
 
         <!-- Predicción del modelo (oculto hasta reconstruir) -->
         <section id="cv-prediction" class="cv-block cv-prediction" hidden>
-          <h2 class="cv-block__title">Predicción del modelo</h2>
+          <h2 class="cv-block__title">
+            <span class="cv-block__icon" aria-hidden="true">◎</span>
+            Predicción del modelo
+          </h2>
           <p id="cv-pred-class" class="cv-pred-class">—</p>
           <p id="cv-confidence" class="cv-confidence">Confianza: —</p>
           <div class="cv-bar"><div id="cv-confidence-bar" class="cv-bar__fill"></div></div>
-          <p id="cv-target-year" class="cv-target-year">Año reconstruido: —</p>
-          <p id="cv-scene-name" class="cv-scene-name">—</p>
+          <div class="cv-prediction-meta">
+            <p id="cv-target-year" class="cv-target-year">Año reconstruido: —</p>
+            <p id="cv-scene-name" class="cv-scene-name">—</p>
+          </div>
         </section>
 
         <!-- Información contextual (hotspots / objetos) -->
         <section class="cv-block cv-infobox">
-          <h2 class="cv-block__title">Información</h2>
+          <h2 class="cv-block__title">
+            <span class="cv-block__icon" aria-hidden="true">◉</span>
+            Información
+          </h2>
           <div id="cv-info-content" class="cv-info-content">
             <p>Selecciona un sitio para comenzar.</p>
           </div>
