@@ -44,63 +44,37 @@ export class UIController {
     this._initMobileSheet();
   }
 
-  // ── Drawer / Bottom sheet ───────────────────────────────────────────────────
+  // ── Bottom sheet + FAB (universal: desktop y mobile) ──────────────────────
   _initMobileSheet() {
-    const panel    = document.querySelector('#cv-panel');
-    const handle   = document.querySelector('#cv-panel-handle');   // mobile
-    const toggle   = document.querySelector('#cv-drawer-toggle');  // desktop
-    const overlay  = document.querySelector('#cv-overlay');
-    const fab      = document.querySelector('#cv-fab');
+    const panel   = document.querySelector('#cv-panel');
+    const handle  = document.querySelector('#cv-panel-handle');
+    const fab     = document.querySelector('#cv-fab');
 
     this._panelEl = panel;
     this._fabEl   = fab;
 
-    if (!panel) return;
+    if (!panel || !handle) return;
 
-    const open = () => {
-      panel.classList.add('is-open');
-      if (overlay) overlay.classList.add('is-visible');
-      if (toggle)  toggle.setAttribute('aria-expanded', 'true');
-      if (fab)     fab.classList.add('is-hidden');
-    };
+    const open  = () => panel.classList.add('is-open');
+    const close = () => panel.classList.remove('is-open');
+    const toggle = () => panel.classList.contains('is-open') ? close() : open();
 
-    const close = () => {
-      panel.classList.remove('is-open');
-      if (overlay) overlay.classList.remove('is-visible');
-      if (toggle)  toggle.setAttribute('aria-expanded', 'false');
-      if (fab)     fab.classList.remove('is-hidden');
-    };
+    // Handle abre/cierra el sheet.
+    handle.addEventListener('click', toggle);
+    handle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') toggle();
+    });
 
-    const togglePanel = () => panel.classList.contains('is-open') ? close() : open();
-
-    // Desktop: botón toggle lateral.
-    if (toggle) {
-      toggle.addEventListener('click', togglePanel);
-    }
-
-    // Desktop: overlay cierra el panel.
-    if (overlay) {
-      overlay.addEventListener('click', close);
-    }
-
-    // Mobile: handle abre/cierra el bottom sheet.
-    if (handle) {
-      handle.addEventListener('click', togglePanel);
-      handle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') togglePanel();
-      });
-    }
-
-    // Mobile: FAB activa Chrono-Vision desde la escena.
+    // FAB siempre activa Chrono-Vision.
     if (fab) {
       fab.addEventListener('click', () => this.activateChrono());
     }
 
-    // Abre el panel al arrancar en desktop para que el usuario lo vea.
-    if (window.innerWidth >= 761) open();
+    // Arranca con el panel abierto para que el usuario vea el selector.
+    open();
   }
 
-  /** Actualiza el título del handle y el estado del FAB en mobile. */
+  /** Actualiza el título del handle y el estado del FAB. */
   _syncMobile(siteName, fabEnabled) {
     const handleTitle = document.querySelector('#cv-handle-site-name');
     if (handleTitle) handleTitle.textContent = siteName || 'Chrono-Vision';
