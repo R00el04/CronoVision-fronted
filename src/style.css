@@ -333,9 +333,9 @@ html, body {
 ══════════════════════════════════════════════════════════════════════════════ */
 .cv-narration-toast {
   position: fixed;
-  /* Desktop: arriba del handle, esquina derecha, debajo del FAB */
   bottom: calc(var(--handle-h) + 20px);
-  right: 40px;
+  left: 20px;
+  right: auto;
   width: 320px;
   max-width: calc(50vw - 60px);
   max-height: 260px;
