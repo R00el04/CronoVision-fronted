@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Chrono-Vision · Patrimonio del Perú</title>
   </head>
   <body>
@@ -13,8 +13,24 @@
       dinámicamente dentro de #cv-stage.
     -->
     <div id="app">
+
+      <!-- Overlay: cierra el panel al hacer clic fuera (desktop) -->
+      <div id="cv-overlay" aria-hidden="true"></div>
+
+      <!-- Botón toggle del drawer (desktop) -->
+      <button id="cv-drawer-toggle" aria-label="Abrir o cerrar panel" aria-expanded="false">
+        <span class="cv-toggle-icon" aria-hidden="true">›</span>
+      </button>
       <!-- ── Panel UI lateral (tema oscuro futurista) ───────────────────────── -->
       <aside id="cv-panel">
+
+        <!-- Handle mobile: toque para abrir/cerrar el bottom sheet -->
+        <div id="cv-panel-handle" role="button" aria-label="Abrir o cerrar panel" tabindex="0">
+          <span class="cv-handle-bar"></span>
+          <p class="cv-handle-title" id="cv-handle-site-name">Chrono-Vision</p>
+          <span class="cv-handle-chevron" aria-hidden="true">⌃</span>
+        </div>
+
         <header class="cv-header">
           <h1 class="cv-title">Chrono-Vision</h1>
           <p class="cv-subtitle">Explorador temporal del patrimonio peruano</p>
@@ -77,19 +93,32 @@
           <ul id="cv-recent-actions" class="cv-live-list"></ul>
         </section>
 
-        <!-- Narración histórica con IA (Groq) -->
-        <section id="cv-narration" class="cv-block cv-narration-block" hidden>
-          <h2 class="cv-block__title">
-            <span class="cv-narration-icon" aria-hidden="true">✦</span>
-            Crónica del explorador
-          </h2>
-          <div id="cv-narration-text" class="cv-narration-text" aria-live="polite" aria-label="Narración histórica generada por IA"></div>
-          <p class="cv-narration-credit">Generado por IA · Groq LLaMA 3</p>
-        </section>
       </aside>
 
       <!-- ── Contenedor de la escena A-Frame ────────────────────────────────── -->
       <main id="cv-stage"></main>
+
+      <!-- FAB mobile: botón flotante sobre la escena (solo visible en mobile) -->
+      <button id="cv-fab" disabled aria-label="Activar Chrono-Vision">
+        ⟳ Activar Chrono-Vision
+      </button>
+
+      <!-- ── Narración histórica flotante sobre la escena (Groq) ────────────── -->
+      <aside id="cv-narration"
+             class="cv-narration-toast"
+             hidden
+             role="complementary"
+             aria-label="Narración histórica generada por IA">
+        <div class="cv-narration-toast__header">
+          <span class="cv-narration-icon" aria-hidden="true">✦</span>
+          <span class="cv-narration-toast__title">Crónica del explorador</span>
+          <button class="cv-narration-toast__close" aria-label="Cerrar narración" id="cv-narration-close">✕</button>
+        </div>
+        <div id="cv-narration-text"
+             class="cv-narration-text"
+             aria-live="polite"></div>
+        <p class="cv-narration-credit">Generado por IA · La IA puede cometer errores</p>
+      </aside>
     </div>
 
     <script type="module" src="/src/main.js"></script>

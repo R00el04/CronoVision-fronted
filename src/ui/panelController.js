@@ -78,19 +78,14 @@ export class PanelController {
 
   /**
    * Inicia la sección de narración IA con efecto de escritura.
-   * Llama a startNarration() antes de empezar a recibir chunks,
-   * luego appendNarrationChunk() por cada fragmento,
-   * y finalmente endNarration() al terminar.
    */
   startNarration() {
-    const block = this.root.querySelector('#cv-narration');
-    if (!block) return;
-    block.hidden = false;
+    const toast = document.querySelector('#cv-narration');
+    if (!toast) return;
 
-    const content = block.querySelector('#cv-narration-text');
+    const content = toast.querySelector('#cv-narration-text');
     if (!content) return;
 
-    // Estado "escribiendo": cursor parpadeante y spinner.
     content.innerHTML = '';
     content.dataset.state = 'writing';
 
@@ -98,14 +93,25 @@ export class PanelController {
     cursor.className = 'cv-narration-cursor';
     cursor.setAttribute('aria-hidden', 'true');
     content.appendChild(cursor);
+
+    // Muestra el toast (la transición CSS se encarga de la animación)
+    toast.hidden = false;
+
+    // Botón de cierre
+    const closeBtn = toast.querySelector('#cv-narration-close');
+    if (closeBtn) {
+      // Elimina listener anterior para evitar duplicados
+      closeBtn.replaceWith(closeBtn.cloneNode(true));
+      toast.querySelector('#cv-narration-close')
+           .addEventListener('click', () => this.clearNarration());
+    }
   }
 
   /** Agrega un fragmento de texto al área de narración (streaming). */
   appendNarrationChunk(chunk) {
-    const content = this.root.querySelector('#cv-narration-text');
+    const content = document.querySelector('#cv-narration-text');
     if (!content) return;
 
-    // Inserta el texto antes del cursor parpadeante.
     const cursor = content.querySelector('.cv-narration-cursor');
     const textNode = document.createTextNode(chunk);
     if (cursor) {
@@ -114,13 +120,13 @@ export class PanelController {
       content.appendChild(textNode);
     }
 
-    // Auto-scroll suave al fondo del panel.
-    this.root.scrollTop = this.root.scrollHeight;
+    // Auto-scroll al fondo del área de texto del toast
+    content.scrollTop = content.scrollHeight;
   }
 
-  /** Finaliza la narración: oculta el cursor y marca como completada. */
+  /** Finaliza la narración: oculta el cursor. */
   endNarration(isError = false) {
-    const content = this.root.querySelector('#cv-narration-text');
+    const content = document.querySelector('#cv-narration-text');
     if (!content) return;
 
     const cursor = content.querySelector('.cv-narration-cursor');
@@ -133,12 +139,12 @@ export class PanelController {
     }
   }
 
-  /** Oculta y limpia el bloque de narración (al resetear o cambiar de sitio). */
+  /** Oculta y limpia el toast de narración. */
   clearNarration() {
-    const block = this.root.querySelector('#cv-narration');
-    if (!block) return;
-    block.hidden = true;
-    const content = block.querySelector('#cv-narration-text');
+    const toast = document.querySelector('#cv-narration');
+    if (!toast) return;
+    toast.hidden = true;
+    const content = toast.querySelector('#cv-narration-text');
     if (content) {
       content.innerHTML = '';
       content.dataset.state = '';
