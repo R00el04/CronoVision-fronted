@@ -41,6 +41,70 @@ export class UIController {
 
     this._wireButtons();
     this._initFirestoreListeners();
+    this._initMobileSheet();
+  }
+
+  // ── Drawer / Bottom sheet ───────────────────────────────────────────────────
+  _initMobileSheet() {
+    const panel    = document.querySelector('#cv-panel');
+    const handle   = document.querySelector('#cv-panel-handle');   // mobile
+    const toggle   = document.querySelector('#cv-drawer-toggle');  // desktop
+    const overlay  = document.querySelector('#cv-overlay');
+    const fab      = document.querySelector('#cv-fab');
+
+    this._panelEl = panel;
+    this._fabEl   = fab;
+
+    if (!panel) return;
+
+    const open = () => {
+      panel.classList.add('is-open');
+      if (overlay) overlay.classList.add('is-visible');
+      if (toggle)  toggle.setAttribute('aria-expanded', 'true');
+      if (fab)     fab.classList.add('is-hidden');
+    };
+
+    const close = () => {
+      panel.classList.remove('is-open');
+      if (overlay) overlay.classList.remove('is-visible');
+      if (toggle)  toggle.setAttribute('aria-expanded', 'false');
+      if (fab)     fab.classList.remove('is-hidden');
+    };
+
+    const togglePanel = () => panel.classList.contains('is-open') ? close() : open();
+
+    // Desktop: botón toggle lateral.
+    if (toggle) {
+      toggle.addEventListener('click', togglePanel);
+    }
+
+    // Desktop: overlay cierra el panel.
+    if (overlay) {
+      overlay.addEventListener('click', close);
+    }
+
+    // Mobile: handle abre/cierra el bottom sheet.
+    if (handle) {
+      handle.addEventListener('click', togglePanel);
+      handle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') togglePanel();
+      });
+    }
+
+    // Mobile: FAB activa Chrono-Vision desde la escena.
+    if (fab) {
+      fab.addEventListener('click', () => this.activateChrono());
+    }
+
+    // Abre el panel al arrancar en desktop para que el usuario lo vea.
+    if (window.innerWidth >= 761) open();
+  }
+
+  /** Actualiza el título del handle y el estado del FAB en mobile. */
+  _syncMobile(siteName, fabEnabled) {
+    const handleTitle = document.querySelector('#cv-handle-site-name');
+    if (handleTitle) handleTitle.textContent = siteName || 'Chrono-Vision';
+    if (this._fabEl) this._fabEl.disabled = !fabEnabled;
   }
 
   // ── Listeners en tiempo real ────────────────────────────────────────────────
@@ -103,6 +167,7 @@ export class UIController {
     this.panel.setStatus(MESSAGES.IDLE, 'idle');
     this.activateBtn.disabled = false;
     this.resetBtn.disabled = true;
+    this._syncMobile(site.name, true);
 
     saveInteraction({ action: 'select_site', siteId: site.id, mlCategory: site.mlCategory });
   }
@@ -132,6 +197,7 @@ export class UIController {
       // 5) Estado final.
       this.panel.setStatus(MESSAGES.DONE, 'done');
       this.resetBtn.disabled = false;
+      this._syncMobile(this.site?.name, false); // deshabilita FAB tras reconstruir
 
       // 6) Arranca la narración histórica con IA (streaming).
       this._startNarration(this.site, reconstruction.targetYear);
@@ -169,6 +235,7 @@ export class UIController {
     this.panel.setStatus(MESSAGES.IDLE, 'idle');
     this.activateBtn.disabled = false;
     this.resetBtn.disabled = true;
+    this._syncMobile(this.site?.name, true); // reactiva FAB al resetear
     saveInteraction({ action: 'reset_view', siteId: this.site.id });
   }
 

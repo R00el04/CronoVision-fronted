@@ -39,4 +39,26 @@ const scene = new SceneController({
 // Coordinador de interfaz (selector de sitios, botones, API, persistencia).
 ui = new UIController({ root: appEl, panel, scene });
 
+// ── Fix orientación mobile ────────────────────────────────────────────────────
+// A-Frame no recalcula el tamaño del canvas al rotar la pantalla.
+// Forzamos el resize del renderer cuando cambia la orientación.
+const fixAFrameResize = () => {
+  // Pequeño delay para que el navegador termine de aplicar el nuevo layout.
+  setTimeout(() => {
+    const sceneEl = document.querySelector('a-scene');
+    if (sceneEl && sceneEl.renderer) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      sceneEl.renderer.setSize(w, h);
+      if (sceneEl.camera) {
+        sceneEl.camera.aspect = w / h;
+        sceneEl.camera.updateProjectionMatrix();
+      }
+    }
+  }, 200);
+};
+
+window.addEventListener('orientationchange', fixAFrameResize);
+window.addEventListener('resize', fixAFrameResize);
+
 console.info('%cChrono-Vision listo · Sistema en espera', 'color:#36e0c8');
