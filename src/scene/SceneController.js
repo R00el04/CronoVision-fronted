@@ -13,7 +13,9 @@ import gsap from 'gsap';
 import { buildCurrentScene } from './currentSceneBuilder.js';
 import { renderReconstruction, setHighlight } from './reconstructionRenderer.js';
 import { registerChronoEffects } from './chronoEffects.js';
-import { DOM, COLORS } from '../utils/constants.js';
+import { createObject } from './objectFactory.js';
+import { getReference } from '../data/referenceImages.js';
+import { DOM, COLORS, deburr } from '../utils/constants.js';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -127,6 +129,18 @@ export class SceneController {
       'property: opacity; from: 0.45; to: 1; dir: alternate; dur: 1500; loop: true; easing: easeInOutSine'
     );
 
+    // Tarjeta flotante con la imagen de referencia del modelado (persistente:
+    // no pertenece a los grupos que se desvanecen; su imagen cambia con la transición).
+    const refCard = createObject({
+      type: 'reference_card',
+      position: { x: 3.7, y: 2.4, z: 1.6 },
+      rotation: { x: 0, y: -30, z: 0 },
+      w: 3.0,
+      h: 1.7,
+    });
+    refCard.setAttribute('id', 'cv-reference-card');
+    refCard.setAttribute('visible', 'false');
+
     scene.append(
       ambient,
       dir,
@@ -134,6 +148,7 @@ export class SceneController {
       ground,
       currentGroup,
       reconGroup,
+      refCard,
       helpText,
       camera
     );
@@ -148,6 +163,22 @@ export class SceneController {
     this.currentGroup = currentGroup;
     this.reconGroup = reconGroup;
     this.helpText = helpText;
+    this.refCard = refCard;
+    this.refImg = refCard.querySelector('.cv-ref-image');
+    this.refTitle = refCard.querySelector('.cv-ref-title');
+  }
+
+  // ── Tarjeta de imagen de referencia ─────────────────────────────────────────
+  /** Asigna imagen + título a la tarjeta, o la oculta si no hay referencia. */
+  setReference(src, title) {
+    if (!this.refCard) return;
+    if (!src) {
+      this.refCard.setAttribute('visible', 'false');
+      return;
+    }
+    if (this.refImg) this.refImg.setAttribute('src', src);
+    if (this.refTitle) this.refTitle.setAttribute('value', deburr(title || ''));
+    this.refCard.setAttribute('visible', 'true');
   }
 
   // ── Carga de la vista actual ────────────────────────────────────────────────
@@ -157,6 +188,10 @@ export class SceneController {
     this._applyEnvironment(site.current.environment, false);
     buildCurrentScene(site, this.currentGroup);
     this.sceneEl.setAttribute('chrono-effect', 'active', false);
+
+    // Tarjeta de referencia: muestra la imagen de la vista deteriorada.
+    const ref = getReference(site.id);
+    this.setReference(ref?.current, ref ? `${site.name} (${site.currentYear})` : '');
 
     if (this.helpText) {
       this.helpText.setAttribute(
@@ -214,6 +249,12 @@ export class SceneController {
       );
     }
 
+    // 5b) La tarjeta de referencia también "viaja al pasado".
+    const ref = getReference(this.site?.id);
+    if (ref?.reconstructed) {
+      this.setReference(ref.reconstructed, `${this.site.name} (${reconstruction.targetYear})`);
+    }
+
     // 6) Apaga el efecto de escaneo.
     await wait(500);
     this.sceneEl.setAttribute('chrono-effect', 'active', false);
@@ -228,6 +269,10 @@ export class SceneController {
     this._applyEnvironment(this.site.current.environment, true);
     buildCurrentScene(this.site, this.currentGroup);
     this._setGroupOpacity(this.currentGroup, 1);
+
+    // La tarjeta de referencia vuelve a la imagen de la vista deteriorada.
+    const ref = getReference(this.site.id);
+    this.setReference(ref?.current, ref ? `${this.site.name} (${this.site.currentYear})` : '');
 
     if (this.helpText) {
       this.helpText.setAttribute(

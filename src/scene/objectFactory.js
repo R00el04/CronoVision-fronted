@@ -435,6 +435,29 @@ const builders = {
     wrapper.appendChild(makeEl('a-sphere', { position: `0 ${r * 2.4} 0`, radius: r, material: materialStr({ color: c, metalness: 0.5, roughness: 0.4 }) }));
   },
 
+  // Tarjeta flotante con la imagen de referencia (concept-art) del modelado.
+  // El src y el título se asignan/actualizan luego vía .cv-ref-image / .cv-ref-title.
+  reference_card(wrapper, spec) {
+    const w = spec.w || 3.2, h = spec.h || 1.8;
+    // Panel de fondo translúcido.
+    wrapper.appendChild(makeEl('a-plane', { width: w + 0.24, height: h + 0.8, position: '0 0.05 -0.03', material: materialStr({ color: COLORS.panelBg, opacity: 0.85, side: 'double' }) }));
+    // Borde holográfico cian (glow detrás de la imagen).
+    wrapper.appendChild(makeEl('a-plane', { width: w + 0.12, height: h + 0.12, position: '0 0.2 -0.02', material: materialStr({ color: COLORS.accent, opacity: 0.2, side: 'double', emissive: COLORS.accent, emissiveIntensity: 0.4 }) }));
+    // Imagen de referencia (el src se setea dinámicamente desde SceneController).
+    const img = makeEl('a-image', { width: w, height: h, position: '0 0.2 0' });
+    if (spec.src) img.setAttribute('src', spec.src);
+    img.classList.add('cv-ref-image');
+    wrapper.appendChild(img);
+    // Encabezado.
+    wrapper.appendChild(makeEl('a-text', { value: 'IMAGEN DE REFERENCIA', align: 'center', width: w * 1.4, color: COLORS.accent, position: `0 ${h / 2 + 0.5} 0.02` }));
+    // Título (sitio + año), editable en runtime.
+    const titleEl = makeEl('a-text', { value: deburr(spec.title || ''), align: 'center', width: w * 1.7, color: COLORS.textBright, position: `0 ${-h / 2 - 0.08} 0.02`, 'wrap-count': 40 });
+    titleEl.classList.add('cv-ref-title');
+    wrapper.appendChild(titleEl);
+    // Leyenda.
+    wrapper.appendChild(makeEl('a-text', { value: 'Base visual del modelado 3D', align: 'center', width: w * 1.3, color: '#8aa0a8', position: `0 ${-h / 2 - 0.4} 0.02` }));
+  },
+
   custom_box(wrapper, { geometry, material }) {
     const g = geometry || {};
     wrapper.appendChild(makeEl('a-box', {
