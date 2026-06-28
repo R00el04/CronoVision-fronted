@@ -16,6 +16,7 @@ import { saveInteraction } from '../services/interactionService.js';
 import { subscribeSites } from '../services/sitesService.js';
 import { subscribeInteractionCount } from '../services/liveStatsService.js';
 import { streamNarration } from '../services/narrationApi.js';
+import { audioService } from '../services/audioService.js';
 
 export class UIController {
   /**
@@ -60,14 +61,33 @@ export class UIController {
     const toggle = () => panel.classList.contains('is-open') ? close() : open();
 
     // Handle abre/cierra el sheet.
-    handle.addEventListener('click', toggle);
+    handle.addEventListener('click', () => {
+      audioService.start(); // primer gesto → desbloquea autoplay
+      toggle();
+    });
     handle.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') toggle();
+      if (e.key === 'Enter' || e.key === ' ') {
+        audioService.start();
+        toggle();
+      }
     });
 
     // FAB siempre activa Chrono-Vision.
     if (fab) {
       fab.addEventListener('click', () => this.activateChrono());
+    }
+
+    // Botón mute — no propaga el clic al handle para no abrir/cerrar el panel.
+    const muteBtn = document.querySelector('#cv-mute-btn');
+    if (muteBtn) {
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // evita toggle del panel
+        audioService.start(); // asegura que el audio arrancó
+        const muted = audioService.toggleMute();
+        muteBtn.dataset.muted = muted;
+        muteBtn.setAttribute('aria-label', muted ? 'Activar audio' : 'Silenciar audio');
+        muteBtn.querySelector('.cv-mute-icon').textContent = muted ? '🔇' : '🔊';
+      });
     }
 
     // Arranca con el panel abierto para que el usuario vea el selector.
@@ -105,8 +125,11 @@ export class UIController {
       btn.className = 'cv-site-btn';
       btn.dataset.siteId = site.id;
       if (site.id === activeSiteId) btn.classList.add('is-active');
-      btn.innerHTML = `<span class="cv-site-btn__name">${site.name}</span>` +
-        `<span class="cv-site-btn__meta">${site.mlCategory}</span>`;
+      btn.innerHTML =
+        `<span class="cv-site-btn__info">` +
+          `<span class="cv-site-btn__name">${site.name}</span>` +
+          `<span class="cv-site-btn__meta">${site.mlCategory}</span>` +
+        `</span>`;
       btn.addEventListener('click', () => this.selectSite(site.id));
       this.selectorEl.appendChild(btn);
     }
@@ -142,6 +165,8 @@ export class UIController {
     this.activateBtn.disabled = false;
     this.resetBtn.disabled = true;
     this._syncMobile(site.name, true);
+    audioService.start();        // no-op si ya arrancó
+    audioService.playSite(site.id); // crossfade al audio del sitio
 
     saveInteraction({ action: 'select_site', siteId: site.id, mlCategory: site.mlCategory });
   }
